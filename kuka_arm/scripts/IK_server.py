@@ -18,6 +18,7 @@ from geometry_msgs.msg import Pose
 from mpmath import *
 from sympy import *
 import numpy as np
+import math
 
 
 class RMSE:
@@ -42,30 +43,83 @@ class RMSE:
 def vec(m):
     return np.array((m[0], m[1], m[2]))
 
-
-def gripper_pos(px,py,pz):
+def make_sympy_vector(px,py,pz):
     return Matrix([[px],[py],[pz],[1]])
+
+
+def safe_asin(expr):
+    return asin(Max(-1.0, Min(1.0, expr)))
+
+def normalize(expr):
+    return atan2(sin(expr), cos(expr))
+
+def normalize_vector(v):
+    s = sqrt(v[0]**2 + v[1]**2 + v[2]**2)
+    return v / s
 
     #rospy.loginfo("Received %s eef-poses from the plan" % len(req.poses))
 
 q0,q1,q2,q3,q4,q5,q6 = symbols('q0:7')
 d0,d1,d2,d3,d4,d5,d6,d7 = symbols('d0:8')
 a0,a1,a2,a3,a4,a5 = symbols('a0:6')
-p_g = symbols('p_gx p_gy p_gz')
 
 parameters = {a0:0,a1:0.35,a2:1.25,a3:-0.054,a4:0,a5:0,
      d0:0,d1:0.75,d2:0,d3:0,d4:1.5,d5:0,d6:0,d7:0.303,
      q0:0,q1:0,q2:0,q3:0,q4:0,q5:0,q6:0
     }
 
+# Symbols for the gripper position:
+g_x, g_y, g_z = symbols('g_x g_y g_z')
+
+# Symbols for the wrist position:
 w_x, w_y, w_z = symbols('w_x w_y w_z')
 
-alpha, beta, gamma = symbols('alpha beta gamma')
-#w_tx, w_ty, w_tz = symbols('w_tx, w_ty, w_tz')
+# Symbols for the quarternion:
+#q_x, q_y, q_z, q_w = symbols('q_x q_y q_z q_w')
 
+# Symbols for rotation matrices:
+phi_x, phi_y, phi_z = symbols('phi_x phi_y phi_z')
+
+R_x = Matrix(
+    [[ 1,          0,          0,  0 ],
+     [ 0,  cos(phi_x), -sin(phi_x),  0 ],
+     [ 0,  sin(phi_x),  cos(phi_x),  0 ],
+     [ 0,          0,          0,  1 ]])
+
+R_y = Matrix(
+    [[ cos(phi_y), 0, sin(phi_y), 0 ],
+     [          0, 1,          0, 0 ],
+     [-sin(phi_y), 0, cos(phi_y), 0 ],
+     [          0, 0,          0, 1 ]])
+
+R_z = Matrix(
+    [[ cos(phi_z), -sin(phi_z), 0, 0 ],
+     [ sin(phi_z),  cos(phi_z), 0, 0 ],
+     [        0,         0, 1, 0 ],
+     [        0,         0, 0, 1 ]])
+
+
+R_corr_z = Matrix(
+    [[cos(pi), -sin(pi), 0, 0 ],
+     [sin(pi),  cos(pi), 0, 0 ],
+     [      0,        0, 1, 0 ],
+     [      0,        0, 0, 1 ]])
+
+R_corr_y = Matrix(
+    [[ cos(-pi/2), 0, sin(-pi/2), 0 ],
+     [          0, 1,          0, 0 ],
+     [-sin(-pi/2), 0, cos(-pi/2), 0 ],
+     [          0, 0,          0, 1 ]])
+
+#R_corr = (R_z * R_y).evalf(subs={phi_y:-np.pi/2, phi_z:np.pi})
+R_corr = R_corr_z * R_corr_y
+R_zyx = simplify(R_z * R_y * R_x)
+
+
+# Individiual transformation matrices
 T1_0 = Matrix(
   [[ cos(q1), -sin(q1),   0,   0],
-   [ sin(q1), -cos(q1),   0,   0],
+   [ sin(q1),  cos(q1),   0,   0],
    [       0,        0,   1,  d1],
    [       0,        0,   0,   1]])
 
@@ -73,7 +127,7 @@ T2_1 = Matrix(
   [[ cos(q2-pi/2), -sin(q2-pi/2),   0,  a1],
    [            0,             0,   1,   0],
    [-sin(q2-pi/2), -cos(q2-pi/2),   0,   0],
-   [            0,             0,   0,   1]])
+   [            0,             0,   0,  1]])
 
 T3_2 = Matrix(
   [[ cos(q3), -sin(q3),  0,  a2],
@@ -105,139 +159,112 @@ TG_6 = Matrix(
    [ 0,  0,  1, d7],
    [ 0,  0,  0,  1]])
 
+T3_0 = simplify(T1_0 * T2_1 * T3_2)
 T4_1 = simplify(T2_1 * T3_2 * T4_3)
-T6_0 = simplify(T1_0 * T2_1 * T3_2 * T4_3 * T5_4 * T6_5)
-
-T6_4_euler = Matrix(
-    [[cos(alpha)*cos(beta), cos(alpha)*sin(beta)*sin(gamma) - sin(alpha)*cos(gamma), cos(alpha)*sin(beta)*cos(gamma)+sin(alpha)*sin(gamma), 0],
-     [sin(alpha)*cos(beta), sin(alpha)*sin(beta)*sin(gamma) + cos(alpha)*cos(gamma), sin(alpha)*sin(beta)*cos(gamma)-cos(alpha)*sin(gamma), 0],
-     [          -sin(beta),                                    cos(beta)*sin(gamma),                                  cos(beta)*cos(gamma), 0],
-     [                   0,                                                       0,                                                     0, 1]])
-
-TG_4_euler = simplify(T6_4_euler * TG_6);
-T4_G_euler = TG_4_euler.inv();
+T6_0 = T1_0 * T2_1 * T3_2 * T4_3 * T5_4 * T6_5
+T6_3 = simplify(T4_3 * T5_4 * T6_5)
+T_total = T6_0 * TG_6 * R_corr
+print "T6_3:", T6_3
 
 
-TG_3 = simplify(T4_3 * T5_4 * T6_5 * TG_6)
-theta5_sym = solve(TG_3[1,2] - T6_4_euler[1,2], q5)
-print(TG_3)
-print(theta5_sym)
+# T6_4_euler = Matrix(
+#     [[cos(alpha)*cos(beta), cos(alpha)*sin(beta)*sin(gamma) - sin(alpha)*cos(gamma), cos(alpha)*sin(beta)*cos(gamma)+sin(alpha)*sin(gamma), 0],
+#      [sin(alpha)*cos(beta), sin(alpha)*sin(beta)*sin(gamma) + cos(alpha)*cos(gamma), sin(alpha)*sin(beta)*cos(gamma)-cos(alpha)*sin(gamma), 0],
+#      [          -sin(beta),                                    cos(beta)*sin(gamma),                                  cos(beta)*cos(gamma), 0],
+#      [                   0,                                                       0,                                                     0, 1]])
+#
+# TG_4_euler = simplify(T6_4_euler * TG_6);
+# T4_G_euler = TG_4_euler.inv();
+
+#q_s = sqrt(1 - q_w**2)
+#N_gripper = Matrix([q_x/q_s, q_y/q_s, q_z/q_s, 0])
+
+N_gripper = R_zyx.col(2)
+gripper_pos = Matrix([g_x, g_y, g_z, 1])
+wrist_pos = gripper_pos - N_gripper * d7
+
+
+#TG_3 = simplify(T4_3 * T5_4 * T6_5 * TG_6)
+#theta5_sym = solve(TG_3[1,2] - T6_4_euler[1,2], q5)
+#print(TG_3)
+#print "theta5_sym: ", theta5_sym
 
 
 w_tx = cos(q1)*w_x + sin(q1)*w_y
 w_ty = 0
 w_tz = w_z - d1
 
-p_gripper = Matrix([[p_g[0]], [p_g[1]], [p_g[2]], [1]])
+#p_gripper = Matrix([[p_g[0]], [p_g[1]], [p_g[2]], [1]])
 
 T4_0 = simplify(T1_0 * T4_1)
 p_0 = Matrix([[0],[0],[0],[1]])
 
-#print(simplify(T2_1))
-
-#print((T1_0*p_0).evalf(subs=parameters))
-#print((T1_0*T2_1*p_0).evalf(subs=parameters))
-#print((T1_0*T2_1*T3_2*p_0).evalf(subs=parameters))
-#print((T1_0*T2_1*T3_2*T4_3*p_0).evalf(subs=parameters))
-
-#print(T4_1)
-rho1_sq = simplify((T4_1[0,3]-a1)**2+T4_1[2,3]**2)
-#rho2_sq = simplify((T4_1[0,3]-a1)**2-T4_1[2,3]**2)
-print(rho1_sq)
-#print(rho2_sq)
-
-
+#rho1_sq = simplify((T4_1[0,3]-a1)**2+T4_1[2,3]**2)
+#print "rho1_sq:", rho1_sq
 
 #rho_sq = simplify(pow(T4_1[0,3]-a1,2) + pow(T4_1[2,3],2))
-rho_sq = pow(w_tx-a1,2) + pow(w_tz,2)
-sigma = (a2**2 + a3**2 + d4**2 - rho_sq) / (2*a2)
+rho_sq = pow(w_tx - a1,2) + pow(w_tz,2)
+sigma_sq = a2**2 + a3**2 + d4**2
+theta3_sym = pi - safe_asin((rho_sq - sigma_sq)/(2*a2*sqrt(a3**2+d4**2))) - atan2(a3, -d4)
 
-theta3_sym = asin(Min(1.0, Max(-1.0, sigma / sqrt(a3**2 + d4**2)))) - atan2(-a3,d4)
-#theta3_sym = -2 * atan2(sqrt(d4**+a3**2-sigma**2) + d4, a3 - sigma)
-theta2_2_sym = asin(d4/sqrt(rho_sq)*sin(q3+pi/2))
 theta2_1_sym = atan2(w_tz,w_tx - a1)
-theta2_sym = pi/2 - (theta2_1_sym + theta2_2_sym)
+#theta2_2_sym = -atan2(a2 + a3*cos(q3)-d4*sin(q3), -a3*sin(q3)-d4*cos(q3))
+theta2_2_sym = -atan2(-a3*sin(q3)-d4*cos(q3), a2 + a3*cos(q3)-d4*sin(q3))
+theta2_sym = pi/2 - theta2_1_sym - theta2_2_sym
 
-alpha_res = alpha - q1
-beta_res = beta - q2 - q3
-
-
-theta5_sym = acos(cos(alpha_res)*cos(beta_res))
-theta6_sym = asin((-sin(alpha_res)*cos(gamma) + cos(alpha_res)*sin(beta_res)*sin(gamma)) / sin(q5))
-theta4_sym = asin(sin(alpha_res)*cos(beta_res) / sin(q5))
-
-w_t = Matrix([[w_tx],[w_ty],[w_tz],[1]])
-
-w_tt = simplify(T4_3.inv()*w_t)
-print(w_tt)
-    #print(rho_sq)
-    #print(rho2_sq)
-    #print(solVve(rho_sq - rho2_sq, q3, manual=True))
+#theta5_sym = acos(cos(alpha_res)*cos(beta_res))
+#theta6_sym = asin((-sin(alpha_res)*cos(gamma) + cos(alpha_res)*sin(beta_res)*sin(gamma)) / sin(q5))
+#theta4_sym = asin(sin(alpha_res)*cos(beta_res) / sin(q5))
 
 
-
-    #print(T4_G_euler * p_gripper)
-
-    #print(solve(-sin(q1)*w_x + cos(q1)*w_y, q1))
-
-    #print(T4_1)
-    #print(w_tx)
-    #print(w_ty)
-    #print(w_tz)
-    #print(T4_G_euler)
-
-    # handle_calculate_IK.globals = {
-    #   "q":q, "d":d, "a":a,
-    #   "alpha":alpha, "beta":beta, "gamma":gamma,
-    #   "w_x":w_x, "w_y":w_y, "w_z":w_z,
-    #   "w_tx":w_tx, "w_ty":w_ty, "w_tz":w_tz,
-    #   "T4_1":T4_1, "T4_G_euler":T4_G_euler,
-    #   "rho_sq":rho_sq, "sigma":sigma,
-    #   "theta2_sym":theta2_sym,
-    #   "theta3_sym":theta3_sym,
-    #   "parameters":parameters
-    #   }
-
-
-def inverse_kinematics_wrist(wx,wy,wz):
+def inverse_kinematics_wrist(wrist_pos):
+    wx, wy, wz, ww = wrist_pos
     theta1 = atan2(wy,wx)
     print("theta1:", theta1)
 
-    print("rho_sq:", rho_sq.evalf(subs=parameters))
     parameters[w_x] = wx
     parameters[w_y] = wy
     parameters[w_z] = wz
-    print("rho_sq:", rho_sq.evalf(subs=parameters))
     parameters[q1] = theta1
-    print("sigma:", sigma.evalf(subs=parameters))
-    print("sigma/sqrt(a3**2+d4**2):", (sigma/sqrt(a3**2+d4**2)).evalf(subs=parameters))
+    parameters[q4] = 0.0
+    #print("sigma/sqrt(a3**2+d4**2):", (sigma/sqrt(a3**2+d4**2)).evalf(subs=parameters))
 
-    print(theta3_sym)
-    theta3 = theta3_sym.evalf(subs=parameters)
+    theta3 = normalize(theta3_sym.evalf(subs=parameters))
     print("theta3:", theta3)
 
     parameters[q3] = theta3
     theta2 = theta2_sym.evalf(subs=parameters)
 
     print("theta2:", theta2)
-    print("w_t:", w_t.evalf(subs=parameters))
+    parameters[q2] = theta2
 
     return theta1,theta2,theta3
 
 
-def inverse_kinematics_gripper():
-    theta5 = theta5_sym.evalf(subs=parameters)
+def inverse_kinematics_gripper(R_gripper):
+    # T6_3: Matrix([
+    # [-sin(q4)*sin(q6) + cos(q4)*cos(q5)*cos(q6), -sin(q4)*cos(q6) - sin(q6)*cos(q4)*cos(q5), -sin(q5)*cos(q4), a3],
+    # [                           sin(q5)*cos(q6),                           -sin(q5)*sin(q6),          cos(q5), d4],
+    # [-sin(q4)*cos(q5)*cos(q6) - sin(q6)*cos(q4),  sin(q4)*sin(q6)*cos(q5) - cos(q4)*cos(q6),  sin(q4)*sin(q5),  0],
+    # [                                         0,                                          0,                0,  1]])
+
+    #R_gripper[2,2] / R_gripper[0,2] = sin(q4)*sin(q5) / (-cos(q4)*sin(q5)) = -sin(q4)/cos(q4) = -tan(q4)
+
+    R_gripper = T3_0.inv().evalf(subs=parameters) * R_gripper
+
+    theta5 = math.acos(R_gripper[1,2])
+    print "theta5:", theta5
     parameters[q5] = theta5
 
     if theta5 < 0.01:
         theta4 = 0.0
-        theta6 = parameters[gamma]
+        theta6 = math.acos(R_gripper[0,0])
         parameters[q4] = theta4
         parameters[q6] = theta6
     else:
-        theta6 = theta6_sym.evalf(subs=parameters)
+        theta6 = math.acos(R_gripper[1,0]/sin(theta5))
         parameters[q6] = theta6
-        theta4 = theta4_sym.evalf(subs=parameters)
+        theta4 = math.atan2(R_gripper[2,2], -R_gripper[0,2])
         parameters[q4] = theta4
 
     return theta4,theta5,theta6
@@ -248,14 +275,27 @@ def forward_kinematics(angles):
     parameters[q1] = angles[0]
     parameters[q2] = angles[1]
     parameters[q3] = angles[2]
+    parameters[q4] = 0.0
 
     if len(angles) == 6:
         parameters[q4] = angles[3]
         parameters[q5] = angles[4]
         parameters[q6] = angles[5]
-        return (T6_0*p_0).evalf(subs=parameters)
+        return (T_total*p_0).evalf(subs=parameters)
     else:
-        return (T4_0*p_0).evalf(subs=parameters)
+        return (T1_0 * T2_1 * T3_2 * T4_3 * p_0).evalf(subs=parameters)
+
+
+def calc_gripper_rotation_matrix(quaternion):
+    if True:
+        return Matrix(tf.transformations.quaternion_matrix(quaternion)) * R_corr
+    else:
+        yaw_val, pitch_val, roll_val = tf.transformations.euler_from_quaternion(quaternion, 'rzyx')
+        return (R_zyx * R_corr).evalf(subs={phi_x:roll_val, phi_y:pitch_val, phi_z:yaw_val})
+
+
+def calc_wrist_position(grapper_pos, R):
+    return (grapper_pos - R.col(2) * d7).evalf(subs=parameters)
 
 
 def handle_calculate_IK(req):
@@ -265,39 +305,19 @@ def handle_calculate_IK(req):
     else:
         # Initialize service response
         joint_trajectory_list = []
-        # T4_G_euler = g["T4_G_euler"]
-        # alpha = g["alpha"]
-        # beta = g["beta"]
-        # gamma = g["gamma"]
-        # d0,d1,d2,d3,d4,d5,d6,d7 = g["d"]
-        # w_x, w_y, w_z = g["w_x"], g["w_y"], g["w_z"]
-        # q0,q1,q2,q3,q4,q5,q6 = g["q"]
-        # parameters = g["parameters"]
-        # theta2_sym = g["theta2_sym"]
-        # theta3_sym = g["theta3_sym"]
-        # w_tx, w_ty, w_tz = g["w_tx"], g["w_ty"], g["w_tz"]
-        # w_t = Matrix([[w_tx], [w_ty], [w_tz], [1]])
 
         for x in xrange(0, len(req.poses)):
-            px = req.poses[x].position.x
-            py = req.poses[x].position.y
-            pz = req.poses[x].position.z
+            gripper_pos = Matrix([req.poses[x].position.x, req.poses[x].position.y, req.poses[x].position.z, 1.0])
+            quaternion = Matrix([[req.poses[x].orientation.x, req.poses[x].orientation.y,
+                req.poses[x].orientation.z, req.poses[x].orientation.w]])
 
-            (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(
-                [req.poses[x].orientation.x, req.poses[x].orientation.y,
-                    req.poses[x].orientation.z, req.poses[x].orientation.w])
+            R_gripper = calc_gripper_rotation_matrix(quaternion)
+            wrist_pos = calc_wrist_position(gripper_pos, R_gripper)
+            theta1,theta2,theta3 = inverse_kinematics_wrist(wrist_pos)
+            theta4,theta5,theta6 = inverse_kinematics_gripper(R_gripper)
 
-            parameters[gamma] = roll
-            parameters[beta] = pitch
-            parameters[alpha] = yaw
-
-            p_gripper = gripper_pos(px,py,pz)
-            wx_val,wy_val,wz_val,ww_val = simplify((T4_G_euler * p_gripper).evalf(subs=parameters))
-            theta1,theta2,theta3 = inverse_kinematics_wrist(wx_val, wy_val, wz_val)
-            theta4,theta5,theta6 = inverse_kinematics_gripper()
-
-            print "Tool position :", px, py, pz
-            print "Wrist position:", wx_val, wy_val, wz_val
+            print "Tool position :", gripper_pos
+            print "Wrist position:", wrist_pos
             print "Resulting wrist position: ", forward_kinematics([theta1, theta2, theta3])
             print "Resulting Tool position:", forward_kinematics([theta1, theta2, theta3, theta4, theta5, theta6])
 
@@ -320,13 +340,58 @@ def IK_server():
     rospy.spin()
 
 if __name__ == "__main__":
-    # print(forward_kinematics([0,0,0,0,0,0]))
-    # wx = 1.85
-    # wy = 0
-    # wz = 1.946
-    #
-    # wx,wy,wz = 2.20378066044923, -0.217688238728822, 0.263026020380731
     if False:
+        test_cases = [
+            (
+                [2.16135,-1.42635,1.55109],
+                [0.708611,0.186356,-0.157931,0.661967],
+                [1.89451,-1.44302,1.69366],
+                [-0.65,0.45,-0.36,0.95,0.79,0.49]
+            ),
+            (
+                [-0.56754,0.93663,3.0038],
+                [0.62073, 0.48318,0.38759,0.480629],
+                [-0.638,0.64198,2.9988],
+                [-0.79,-0.11,-2.33,1.94,1.14,-3.68]
+            ),
+            (
+                [-1.3863,0.02074,0.90986],
+                [0.01735,-0.2179,0.9025,0.371016],
+                [-1.1669,-0.17989,0.85137],
+                [-2.99,-0.12,0.94,4.06,1.29,-4.12]
+            )
+        ]
+
+        for t in test_cases:
+            print "="*60
+            (px,py,pz),(qx,qy,qz,qw),(wx,wy,wz),angles = t
+
+            gripper_pos = Matrix([px, py, pz, 1.0])
+            quaternion = Matrix([qx, qy, qz, qw])
+
+            print "Gripper axis:", normalize_vector(Matrix([px, py, pz]) - Matrix([wx, wy, wz]))
+            R_gripper = calc_gripper_rotation_matrix(quaternion)
+            print "R_gripper:", R_gripper
+            wrist_pos = calc_wrist_position(gripper_pos, R_gripper)
+            angles_pred = inverse_kinematics_wrist(wrist_pos) + inverse_kinematics_gripper(R_gripper)
+            parameters[q1] = angles[0]
+            parameters[q2] = angles[1]
+            parameters[q3] = angles[2]
+            parameters[q4] = angles[3]
+            parameters[q5] = angles[4]
+            parameters[q6] = angles[5]
+            print "T6_0  :", T6_0.evalf(subs=parameters)
+            print "p     :", (px,py,pz)
+            print "w     :", (wx,wy,wz)
+            print "wrist_pos:", wrist_pos
+            print "p_forward:", forward_kinematics(angles)
+            print "w_pred", forward_kinematics(angles_pred[0:3])
+            print "p_pred", forward_kinematics(angles_pred)
+            print "Angles:", angles
+            print "Angles pred:", angles_pred
+            print
+            print
+        1/0
         import math
         rmse = RMSE()
         phi = 0
@@ -341,6 +406,7 @@ if __name__ == "__main__":
                 print "="*70
                 print "z = %.2f, phi = %.2f" % (z,phi)
                 print "="*70
+                print "T4_0: ", T4_0
                 print "w: ", wx,wy,wz
                 print "Angles: ", angles
                 print "w_pred:", w_pred
