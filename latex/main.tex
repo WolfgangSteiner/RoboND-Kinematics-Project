@@ -57,7 +57,7 @@
 \usepackage{titling} % Customizing the title section
 \usepackage{hyperref} % For hyperlinks in the PDF
 \usepackage{flushend}
-
+\usepackage{tabularx}
 
 \renewcommand{\c}{\text{c}}
 \newcommand{\s}{\text{s}}
@@ -109,68 +109,82 @@
 \include{tables/dh-parameters}
 \end{table}
 
-$$ \T{i-1}{i} =
+\begin{equation}
+\T{i-1}{i} =
 \begin{bmatrix}
   \c\theta_i & -\s\theta_i & 0 & a_{i-1} \\
   \s\theta_i\c\alpha_{i-1} & \c\theta_i\c\alpha_{i-i} & -\s\alpha_{i-1} & -\s\alpha_{i-1}d_i \\
   \s\theta_i\s\alpha_{i-1} & \c\theta_i\s\alpha_{i-i} &  \c\alpha_{i-1} &  \c\alpha_{i-1}d_i \\
   0 & 0 & 0 & 1\\
 \end{bmatrix}
-$$
+\end{equation}
 
-$$ \T{0}{1} =
+\noindent
+\begin{minipage}{0.33\linewidth}
+\begin{equation}
+\T{0}{1} =
   \begin{bmatrix}
     \c\theta_1 & -\s\theta_1 & 0 & 0 \\
     \s\theta_1 &  \c\theta_1 & 0 & 0 \\
             0 &          0 & 1 & d_1 \\
             0 &          0 & 0 & 1 \\
-  \end{bmatrix} $$
-
-
-
-$$ \T{1}{2} =
-\begin{bmatrix}
-\c(\theta_2 - \pihalf) & -\s(\theta_2 - \pihalf) &  0 & a_1 \\
-                     0 &                       0 &  1 &   0 \\
--\s(\theta_2 - \pihalf)&  \c(\theta_2 - \pihalf) &  0 &   0 \\
-                     0 &                       0 &  0 &   1 \\
-\end{bmatrix}
-=
-\begin{bmatrix}
-\s\theta_2 &  \c\theta_2 & 0 & a_1 \\
-         0 &           0 & 1 &   0 \\
-\c\theta_2 &  \s\theta_2 & 0 &   0 \\
-         0 &           0 & 0 &   1 \\
-\end{bmatrix}
-$$
-
-$$ \T{2}{3} =
-\begin{bmatrix}
-  \c\theta_3 & -\s\theta_3 & 0 & a_2 \\
-  \s\theta_3 &  \c\theta_3 & 0 &   0 \\
+  \end{bmatrix}
+\end{equation}
+\end{minipage}%
+\begin{minipage}{0.67\linewidth}
+\begin{equation}
+  \T{1}{2} =
+  \begin{bmatrix}
+  \c(\theta_2 - \pihalf) & -\s(\theta_2 - \pihalf) &  0 & a_1 \\
+                       0 &                       0 &  1 &   0 \\
+  -\s(\theta_2 - \pihalf)&  \c(\theta_2 - \pihalf) &  0 &   0 \\
+                       0 &                       0 &  0 &   1 \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  \s\theta_2 &  \c\theta_2 & 0 & a_1 \\
            0 &           0 & 1 &   0 \\
+  \c\theta_2 &  \s\theta_2 & 0 &   0 \\
            0 &           0 & 0 &   1 \\
-\end{bmatrix}
-$$
+  \end{bmatrix}
+\end{equation}
+\end{minipage}
 
-$$ \T{3}{4} =
+\vspace{0.5ex}
+
+\noindent\begin{minipage}{0.33\linewidth}
+\begin{equation}
+  \T{2}{3} =
+  \begin{bmatrix}
+    \c\theta_3 & -\s\theta_3 & 0 & a_2 \\
+    \s\theta_3 &  \c\theta_3 & 0 &   0 \\
+             0 &           0 & 1 &   0 \\
+             0 &           0 & 0 &   1 \\
+  \end{bmatrix}
+\end{equation}
+\end{minipage}%
+\begin{minipage}{0.33\linewidth}
+\begin{equation}
+\T{3}{4} =
 \begin{bmatrix}
   \c\theta_4 & -s\theta_4 & 0 & a_3 \\
            0 &          0 & 1 & d_4 \\
  -\s\theta_4 & -c\theta_4 & 0 &   0 \\
            0 &           0 & 0 &  1 \\
 \end{bmatrix}
-$$
-
-
-$$ \T{4}{5} =
+\end{equation}
+\end{minipage}
+\begin{minipage}{0.33\linewidth}
+\begin{equation}
+\T{4}{5} =
 \begin{bmatrix}
   \c\theta_5 & -\s\theta_5 &  0 & 0 \\
            0 &           0 & -1 & 0 \\
   \s\theta_5 &  \c\theta_5 &  0 & 0 \\
            0 &           0 &  0 & 1 \\
 \end{bmatrix}
-$$
+\end{equation}
+\end{minipage}%
 
 $$ \T{5}{6} =
 \begin{bmatrix}
@@ -198,7 +212,8 @@ $$
 \end{matrix}
 $$
 
-$$ \small \T{4}{1} =
+\begin{equation*}
+\T{4}{1} =
 \begin{bmatrix}
   \s(\theta_2 + \theta_3)\c\theta_4 & -\s\theta_4\s(\theta_2 + \theta_3) & \c(\theta_2 + \theta_3) & a_1 + a_2\s(\theta_2) + a_3\s(\theta_2 + \theta_3) + d_4\c(\theta_2 + \theta_3) \\
   -\s\theta_4 & -\c\theta_4 & 0 & 0 \\
@@ -210,7 +225,20 @@ $$ \small \T{4}{1} =
 & R_1^4& & \begin{matrix} w_{tx} \\ w_{ty} \\ w_{tz} \end{matrix} \\
 0 & 0 & 0 & 1 \\
 \end{bmatrix}
-$$
+\label{eq:t41}
+\end{equation*}
+
+The entries of the rightmost column of the matrix $\T{4}{1}$ represent the translation of the
+wrist center relative to the origin of link 1, so we can extract the following two equations from this:
+
+\begin{eqnarray}
+   w_{tx} - a_1 &=& a_2\s(\theta_2) + a_3\s(\theta_2 + \theta_3) + d_4\c(\theta_2 + \theta_3) \\
+   w_{tz}       &=& a_2\c(\theta_2) + a_3\c(\theta_2 + \theta_3) - d_4\s(\theta_2 + \theta_3)
+\end{eqnarray}
+
+The angle $\theta_3$ effectively defines the reach or radius of the robot arm, which has to be equal
+to the distance between link one and the transformed wrist center position in the plane of the arm.
+Thus by computing the squared distance we get:
 
 \begin{equation}
 \begin{split}
