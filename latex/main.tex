@@ -1,0 +1,243 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Journal Article
+% LaTeX Template
+% Version 1.4 (15/5/16)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Frits Wenneker (http://www.howtotex.com) with extensive modifications by
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[twoside]{article}
+
+%\usepackage[sc]{mathpazo} % Use the Palatino font
+%\usepackage[UTF8]{fontenc} % Use 8-bit encoding that has 256 glyphs
+\linespread{1.05} % Line spacing - Palatino needs more space between lines
+\usepackage{microtype} % Slightly tweak font spacing for aesthetics
+\usepackage[english]{babel} % Language hyphenation and typographical rules
+\usepackage{amsmath}
+
+\usepackage[hmarginratio=1:1,top=12.7mm,left=12.7mm,columnsep=20pt]{geometry} % Document margins
+\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+
+\usepackage{lettrine} % The lettrine is the first enlarged letter at the beginning of the text
+
+\usepackage{enumitem} % Customized lists
+\setlist[itemize]{noitemsep} % Make itemize lists more compact
+
+\usepackage{abstract} % Allows abstract customization
+\renewcommand{\abstractnamefont}{\normalfont\bfseries} % Set the "Abstract" text to bold
+\renewcommand{\abstracttextfont}{\normalfont\small\itshape} % Set the abstract itself to small italic text
+
+\usepackage{titlesec} % Allows customization of titles
+\renewcommand\thesection{\Roman{section}} % Roman numerals for the sections
+\renewcommand\thesubsection{\roman{subsection}} % roman numerals for subsections
+\titleformat{\section}[block]{\large\scshape\centering}{\thesection.}{1em}{} % Change the look of the section titles
+\titleformat{\subsection}[block]{\large}{\thesubsection.}{1em}{} % Change the look of the section titles
+
+\usepackage{fancyhdr} % Headers and footers
+\pagestyle{fancy} % All pages have headers and footers
+\fancyhead{} % Blank out the default header
+\fancyfoot{} % Blank out the default footer
+%\fancyhead[C]{Running title $\bullet$ May 2016 $\bullet$ Vol. XXI, No. 1} % Custom header text
+\fancyfoot[RO,LE]{\thepage} % Custom footer text
+
+\usepackage{titling} % Customizing the title section
+\usepackage{hyperref} % For hyperlinks in the PDF
+\usepackage{flushend}
+
+
+\renewcommand{\c}{\text{c}}
+\newcommand{\s}{\text{s}}
+\newcommand{\pihalf}{\frac{\pi}{2}}
+\newcommand{\T}[2]{\mbox{$_{#2}^{#1}{T}$}}
+
+
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\setlength{\droptitle}{-4\baselineskip} % Move the title up
+
+\pretitle{\begin{center}\Huge\bfseries} % Article title formatting
+\posttitle{\end{center}} % Article title closing formatting
+\title{Pick and Place Project Report} % Article title
+\author{%
+\textsc{Wolfgang Steiner} \\[0.5ex] % Your name
+%\normalsize University of California \\ % Your institution
+\normalsize \href{mailto:wolfgang.steiner@gmail.com}{wolfgang.steiner@gmail.com} % Your email address
+%\and % Uncomment if 2 authors are required, duplicate these 4 lines if more
+%\textsc{Jane Smith}\thanks{Corresponding author} \\[1ex] % Second author's name
+%\normalsize University of Utah \\ % Second author's institution
+%\normalsize \href{mailto:jane@smith.com}{jane@smith.com} % Second author's email address
+}
+\date{\today} % Leave empty to omit a date
+\renewcommand{\maketitlehookd}{%
+% \begin{abstract}
+% \noindent
+% \end{abstract}
+}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+% Print the title
+\maketitle
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section{Forward Kinematics}
+\begin{table}[ht]
+\caption{Modified DH parameters of the Kuka XXX arm.}
+\label{tab:dh-parameters}
+\include{tables/dh-parameters}
+\end{table}
+
+$$ \T{i-1}{i} =
+\begin{bmatrix}
+  \c\theta_i & -\s\theta_i & 0 & a_{i-1} \\
+  \s\theta_i\c\alpha_{i-1} & \c\theta_i\c\alpha_{i-i} & -\s\alpha_{i-1} & -\s\alpha_{i-1}d_i \\
+  \s\theta_i\s\alpha_{i-1} & \c\theta_i\s\alpha_{i-i} &  \c\alpha_{i-1} &  \c\alpha_{i-1}d_i \\
+  0 & 0 & 0 & 1\\
+\end{bmatrix}
+$$
+
+$$ \T{0}{1} =
+  \begin{bmatrix}
+    \c\theta_1 & -\s\theta_1 & 0 & 0 \\
+    \s\theta_1 &  \c\theta_1 & 0 & 0 \\
+            0 &          0 & 1 & d_1 \\
+            0 &          0 & 0 & 1 \\
+  \end{bmatrix} $$
+
+
+
+$$ \T{1}{2} =
+\begin{bmatrix}
+\c(\theta_2 - \pihalf) & -\s(\theta_2 - \pihalf) &  0 & a_1 \\
+                     0 &                       0 &  1 &   0 \\
+-\s(\theta_2 - \pihalf)&  \c(\theta_2 - \pihalf) &  0 &   0 \\
+                     0 &                       0 &  0 &   1 \\
+\end{bmatrix}
+=
+\begin{bmatrix}
+\s\theta_2 &  \c\theta_2 & 0 & a_1 \\
+         0 &           0 & 1 &   0 \\
+\c\theta_2 &  \s\theta_2 & 0 &   0 \\
+         0 &           0 & 0 &   1 \\
+\end{bmatrix}
+$$
+
+$$ \T{2}{3} =
+\begin{bmatrix}
+  \c\theta_3 & -\s\theta_3 & 0 & a_2 \\
+  \s\theta_3 &  \c\theta_3 & 0 &   0 \\
+           0 &           0 & 1 &   0 \\
+           0 &           0 & 0 &   1 \\
+\end{bmatrix}
+$$
+
+$$ \T{3}{4} =
+\begin{bmatrix}
+  \c\theta_4 & -s\theta_4 & 0 & a_3 \\
+           0 &          0 & 1 & d_4 \\
+ -\s\theta_4 & -c\theta_4 & 0 &   0 \\
+           0 &           0 & 0 &  1 \\
+\end{bmatrix}
+$$
+
+
+$$ \T{4}{5} =
+\begin{bmatrix}
+  \c\theta_5 & -\s\theta_5 &  0 & 0 \\
+           0 &           0 & -1 & 0 \\
+  \s\theta_5 &  \c\theta_5 &  0 & 0 \\
+           0 &           0 &  0 & 1 \\
+\end{bmatrix}
+$$
+
+$$ \T{5}{6} =
+\begin{bmatrix}
+  \c\theta_6 & -\s\theta_6 & 0 & 0 \\
+           0 &           0 & 1 & 0 \\
+ -\s\theta_6 & -\c\theta_6 & 0 & 0 \\
+           0 &           0 & 0 & 1 \\
+\end{bmatrix}
+$$
+
+$$ \T{6}{G} =
+\begin{bmatrix}
+  1 & 0 & 0 &   0 \\
+  0 & 1 & 0 &   0 \\
+  0 & 0 & 1 & d_G \\
+  0 & 0 & 0 &   1 \\
+\end{bmatrix}
+$$
+
+$$
+\begin{matrix}
+  w_{tx} & = & w_x \c\theta_1 + w_y \s\theta_1 - a_1 & &\\
+  w_{ty} & = & - w_x  \s\theta_1 + w_y \c\theta_1 & = &0\\
+  w_{tz} & = & w_z - d_1&& \\
+\end{matrix}
+$$
+
+$$ \small \T{4}{1} =
+\begin{bmatrix}
+  \s(\theta_2 + \theta_3)\c\theta_4 & -\s\theta_4\s(\theta_2 + \theta_3) & \c(\theta_2 + \theta_3) & a_1 + a_2\s(\theta_2) + a_3\s(\theta_2 + \theta_3) + d_4\c(\theta_2 + \theta_3) \\
+  -\s\theta_4 & -\c\theta_4 & 0 & 0 \\
+  \c\theta_4\c(\theta_2 + \theta_3) & -\s\theta_4\c(\theta_2 + \theta_3) & -\s(\theta_2 + \theta_3) & a_2\c(\theta_2) + a_3\c(\theta_2 + \theta_3) - d_4\s(\theta_2 + \theta_3) \\
+  0 & 0 & 0 & 1\\
+\end{bmatrix}
+=
+\begin{bmatrix}
+& R_1^4& & \begin{matrix} w_{tx} \\ w_{ty} \\ w_{tz} \end{matrix} \\
+0 & 0 & 0 & 1 \\
+\end{bmatrix}
+$$
+
+\begin{equation}
+\begin{split}
+(w_{tx} - a_1)^2 + w_{tz}^2 &= a_2^2 (\s^2\theta_2 + \c^2\theta_2) + a_3^2 (\s^2(\theta_2 + \theta_3) + \c^2(\theta_2 + \theta_3)) + d_4^2(\s^2(\theta_2 + \theta_3) + \c^2(\theta_2 + \theta_3)) \\
+                            &+ 2 a_2 a_3 \s\theta_2\s(\theta_2 + \theta_3) + 2 a_2 d_4 \s\theta_2\c(\theta_2 + \theta_3) + 2 a_3 d_4 \s(\theta_2+\theta_3)\c(\theta_2 + \theta_3) \\
+                            &+ 2 a_2 a_3 \c\theta_2\c(\theta_2 + \theta_3) - 2 a_2 d_4 \c\theta_2\s(\theta_2 + \theta_3) - 2 a_3 d_4 \c(\theta_2+\theta_3)\s(\theta_2 + \theta_3) \\
+                            &= a_2^2 + a_3^2 + d_4^2 + 2 a_2 a_3 \c\theta_3 - 2 a_2 d_4\s\theta_3 \\
+\end{split}
+\end{equation}
+
+\begin{equation}
+  \frac{\rho^2 - \sigma^2}{2 a_2} = a_3\c\theta_3 - d_4\s\theta_3 = \sqrt{a_3^2 + d_4^2} \cdot \sin(\theta_3 + \text{atan2}(a_3, -d_4))
+\end{equation}
+
+\begin{equation}
+  \theta_3 = \text{asin}\left(\frac{\rho^2 - \sigma^2}{2 a_2 \sqrt{a_3^2 + d_4^2}}\right) - \text{atan2}(a_3, -d_4)
+\end{equation}
+
+
+%------------------------------------------------
+
+%----------------------------------------------------------------------------------------
+%	REFERENCE LIST
+%----------------------------------------------------------------------------------------
+
+%\bibliography{research_review}
+%\bibliographystyle{ieeetr}
+%----------------------------------------------------------------------------------------
+
+\end{document}
