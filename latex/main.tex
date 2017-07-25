@@ -47,25 +47,46 @@
 \titleformat{\section}[block]{\large\scshape\centering}{\thesection.}{1em}{} % Change the look of the section titles
 \titleformat{\subsection}[block]{\large}{\thesubsection.}{1em}{} % Change the look of the section titles
 
-\usepackage{fancyhdr} % Headers and footers
-\pagestyle{fancy} % All pages have headers and footers
-\fancyhead{} % Blank out the default header
-\fancyfoot{} % Blank out the default footer
-%\fancyhead[C]{Running title $\bullet$ May 2016 $\bullet$ Vol. XXI, No. 1} % Custom header text
-\fancyfoot[RO,LE]{\thepage} % Custom footer text
+% \usepackage{fancyhdr} % Headers and footers
+% \pagestyle{fancy} % All pages have headers and footers
+% \fancyhead{} % Blank out the default header
+% \fancyfoot{} % Blank out the default footer
+% %\fancyhead[C]{Running title $\bullet$ May 2016 $\bullet$ Vol. XXI, No. 1} % Custom header text
+% \fancyfoot[RO,LE]{\thepage} % Custom footer text
 
 \usepackage{titling} % Customizing the title section
 \usepackage{hyperref} % For hyperlinks in the PDF
 \usepackage{flushend}
 \usepackage{tabularx}
+\usepackage{listings}
+
 
 \renewcommand{\c}{\text{c}}
 \newcommand{\s}{\text{s}}
 \newcommand{\pihalf}{\frac{\pi}{2}}
 \newcommand{\T}[2]{\mbox{$_{#2}^{#1}{T}$}}
+\newcommand{\R}[2]{\mbox{$_{#2}^{#1}{R}$}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\acos}{\text{acos}}
+\newcommand{\asin}{\text{asin}}
 
-
-
+\lstset{
+  %frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  % numberstyle=\tiny\color{gray},
+  % keywordstyle=\color{blue},
+  % commentstyle=\color{dkgreen},
+  % stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
 %----------------------------------------------------------------------------------------
 %	TITLE SECTION
 %----------------------------------------------------------------------------------------
@@ -186,23 +207,32 @@
 \end{equation}
 \end{minipage}%
 
-$$ \T{5}{6} =
+\begin{minipage}{0.33\linewidth}
+\begin{equation}
+\T{5}{6} =
 \begin{bmatrix}
   \c\theta_6 & -\s\theta_6 & 0 & 0 \\
            0 &           0 & 1 & 0 \\
  -\s\theta_6 & -\c\theta_6 & 0 & 0 \\
            0 &           0 & 0 & 1 \\
 \end{bmatrix}
-$$
-
-$$ \T{6}{G} =
+\end{equation}
+\end{minipage}%
+\begin{minipage}{0.33\linewidth}
+\begin{equation}
+\T{6}{G} =
 \begin{bmatrix}
   1 & 0 & 0 &   0 \\
   0 & 1 & 0 &   0 \\
   0 & 0 & 1 & d_G \\
   0 & 0 & 0 &   1 \\
 \end{bmatrix}
-$$
+\end{equation}
+\end{minipage}%
+\begin{minipage}{0.33\linewidth}
+\end{minipage}
+
+\section{Inverse Kinematics of the Wrist Center}
 
 $$
 \begin{matrix}
@@ -242,21 +272,109 @@ Thus by computing the squared distance we get:
 
 \begin{equation}
 \begin{split}
-(w_{tx} - a_1)^2 + w_{tz}^2 &= a_2^2 (\s^2\theta_2 + \c^2\theta_2) + a_3^2 (\s^2(\theta_2 + \theta_3) + \c^2(\theta_2 + \theta_3)) + d_4^2(\s^2(\theta_2 + \theta_3) + \c^2(\theta_2 + \theta_3)) \\
-                            &+ 2 a_2 a_3 \s\theta_2\s(\theta_2 + \theta_3) + 2 a_2 d_4 \s\theta_2\c(\theta_2 + \theta_3) + 2 a_3 d_4 \s(\theta_2+\theta_3)\c(\theta_2 + \theta_3) \\
-                            &+ 2 a_2 a_3 \c\theta_2\c(\theta_2 + \theta_3) - 2 a_2 d_4 \c\theta_2\s(\theta_2 + \theta_3) - 2 a_3 d_4 \c(\theta_2+\theta_3)\s(\theta_2 + \theta_3) \\
-                            &= a_2^2 + a_3^2 + d_4^2 + 2 a_2 a_3 \c\theta_3 - 2 a_2 d_4\s\theta_3 \\
+(w_{tx} - a_1)^2 + w_{tz}^2
+  % &= a_2^2 (\s^2\theta_2 + \c^2\theta_2) + a_3^2 (\s^2(\theta_2 + \theta_3) + \c^2(\theta_2 + \theta_3)) + d_4^2(\s^2(\theta_2 + \theta_3) + \c^2(\theta_2 + \theta_3)) \\
+  % &+ 2 a_2 a_3 \s\theta_2\s(\theta_2 + \theta_3) + 2 a_2 d_4 \s\theta_2\c(\theta_2 + \theta_3) + 2 a_3 d_4 \s(\theta_2+\theta_3)\c(\theta_2 + \theta_3) \\
+  % &+ 2 a_2 a_3 \c\theta_2\c(\theta_2 + \theta_3) - 2 a_2 d_4 \c\theta_2\s(\theta_2 + \theta_3) - 2 a_3 d_4 \c(\theta_2+\theta_3)\s(\theta_2 + \theta_3) \\
+  = a_2^2 + a_3^2 + d_4^2 + 2 a_2 a_3 \c\theta_3 - 2 a_2 d_4\s\theta_3 \\
 \end{split}
 \end{equation}
 
 \begin{equation}
-  \frac{\rho^2 - \sigma^2}{2 a_2} = a_3\c\theta_3 - d_4\s\theta_3 = \sqrt{a_3^2 + d_4^2} \cdot \sin(\theta_3 + \text{atan2}(a_3, -d_4))
+\begin{split}
+  \frac{\rho^2 - \sigma^2}{2 a_2} &= a_3\c\theta_3 - d_4\s\theta_3 = \sqrt{a_3^2 + d_4^2} \cdot \sin(\theta_3 + \text{atan2}(a_3, -d_4))
+  \\ \rho^2 &= (w_{tx} - a_1)^2 + w_{tz}^2, \ \sigma^2 = a_2^2 + a_3^2 + d_4^2
+\end{split}
 \end{equation}
+
+% \begin{equation}
+%   \alpha\sin(x) + \beta\cos(x) = \gamma \sin(x + \phi), \ \text{with:}\ \gamma = \sqrt{\alpha^2 + \beta^2},\ \phi = \text{atan2}(\beta, \alpha)
+% \end{equation}
 
 \begin{equation}
   \theta_3 = \text{asin}\left(\frac{\rho^2 - \sigma^2}{2 a_2 \sqrt{a_3^2 + d_4^2}}\right) - \text{atan2}(a_3, -d_4)
 \end{equation}
 
+\section{Inverse Kinematics of the Gripper Orientation}
+Once the first three joint angles have been determined, the inverse kinematics problem can be
+completed by computing the orientation of the tool relative to the wrist center. The desired
+orientation of the gripper is supplied to the IK solver in form of a quaternion \ref{quaternion}.
+This can be directly converted into a rotation matrix using the function \code{tf.transformations.quaternion\_matrix}.
+which is equivalent to the following:
+\begin{equation}
+  R_{gripper} =
+  \begin{bmatrix}
+    1 - 2 q_y^2 - 2 q_z^2	& 2 q_x q_y - 2 q_z q_w	& 2 q_x q_z + 2 q_y q_w \\
+    2 q_x q_y + 2 q_z q_w	& 1 - 2 q_x^2 - 2 q_z^2	& 2 q_y q_z - 2 q_x q_w \\
+    2 q_x q_z - 2 q_y q_w	& 2 q_y q_z + 2 q_x q_w	& 1 - 2 q_x^2 - 2 q_y^2
+  \end{bmatrix}
+  \cdot R_{corr}
+\end{equation}
+
+Alternatively, the roll ($\phi$), pitch ($\theta$), and yaw ($\psi$) angles can be computed with the function
+\\ \code{transformations.euler\_from\_quaternion}, by specifiying the \code{'rzyx'} option.
+This computes the Euler angles relative to the local frame in the order of a rotation about the
+z, y and x axes in this order. With these Euler angles, the total rotation matrix can be computed as:
+
+\begin{equation}
+  R_{gripper} = R_z(\psi) R_y(\theta) R_x(\phi) R_{corr}
+=
+  \begin{bmatrix}
+    \c\theta \c\psi& \s\phi \s\theta \c\psi - \s\psi \c\phi&  \s\phi \s\psi + \s\theta \c\phi \c\psi \\
+    \s\psi \c\theta& \s\phi \s\theta \s\psi + \c\phi \c\psi& -\s\phi \c\psi + \s\theta \s\psi \c\phi \\
+          -\s\theta&                        \s\phi \c\theta&                         \c\phi \c\theta
+  \end{bmatrix}
+  \cdot R_{corr}
+\end{equation}
+
+As the angles $\theta_1$, $\theta_2$ and $\theta_3$ are already known from the previous steps,
+it is now possible to compute the rotation matrix $\R{3}{6}$ by premultiplying the matrix $R_{gripper}$
+with the inverse of the composite rotation $\R{0}{3}$:
+\begin{equation}
+  \R{3}{6} = (\R{0}{1}\cdot \R{1}{2}\cdot \R{2}{3})^{-1} R_{gripper} =
+  \begin{bmatrix}
+    -\s\theta_4 \s\theta_6 + \c\theta_4*\c\theta_5 \c\theta_6 & -\s\theta_4 \c\theta_6 - \s\theta_6 \c\theta_4 \c\theta_5 & -\s\theta_5 \c\theta_4 \\
+                                        \s\theta_5 \c\theta_6 &                                    -\s\theta_5 \s\theta_6 &             \c\theta_5 \\
+    -\s\theta_4 \c\theta_5 \c\theta_6 - \s\theta_6 \c\theta_4 &  \s\theta_4 \s\theta_6 \c\theta_5 - \c\theta_4 \c\theta_6 &  \s\theta_4 \s\theta_5
+  \end{bmatrix}
+\end{equation}
+
+From this matrix, $\theta_5$ can be directly computed as:
+\begin{equation}
+  \theta_5 = \pm\acos(\R{3}{6}_{23})
+\end{equation}
+
+To guarantee that the gripper will point into the correct direction and not its opposite,
+it is important to compute $\theta_4$  by satisfying \emph{two} entries of the matrix
+$\R{3}{6}$.
+\begin{equation}
+  \frac{\R{3}{6}_{33}}{-\R{3}{6}_{13}} = \frac{\s\theta_4\s\theta_5}{\c\theta_4\s\theta_5} = \tan(\theta_4)
+\end{equation}
+
+From this, $\theta_4$ can be computed as follows. Here, I set $theta_4$ to zero for very small
+$\theta_5$. In this case, the correct orientation of the gripper is achieved by $\theta_6$.
+\begin{equation}
+  \theta_4
+  \begin{cases}
+    \text{atan2}\left(\R{3}{6}_{33}, -\R{3}{6}_{13}\right) & \text{if}\ |\theta_5| > \epsilon \\
+    0                                           & \text{if}\ |\theta_5| \leq \epsilon
+  \end{cases}
+\end{equation}
+
+Finally, $\theta_6$ can be computed from one of two cases: If $\theta_5$, and
+consequently $\theta_4$ are close to zero, the first entry $\R{3}{6}_{11}$ simplifies to
+$\c\theta_6$. Otherwise, $\theta_6$ can easily be computed from $\R{3}{6}_{21}$.
+Thus, we get the following expressions for computing $\theta_6$:
+\begin{equation}
+  \theta_6 =
+  \begin{cases}
+     \text{acos}\left(\frac{\R{3}{6}_{21}}{\sin(\theta_5)}\right) & \text{if}\ |\theta_5| > \epsilon \\
+     \text{acos}\left(\R{3}{6}_{11}\right)                & \text{if}\ |\theta_5| < \epsilon
+  \end{cases}
+\end{equation}
+% \begin{lstlisting}
+%   yaw, pitch, roll = tf.transformations.euler_from_quaternion(quaternion, 'rzyx')
+% \end{lstlisting}
 
 %------------------------------------------------
 
