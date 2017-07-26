@@ -61,6 +61,7 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{gensymb}
 
 
 \renewcommand{\c}{\text{c}}
@@ -72,7 +73,8 @@
 \newcommand{\acos}{\text{acos}}
 \newcommand{\asin}{\text{asin}}
 \newcommand{\figref}[1]{Fig.~\ref{fig:#1}}
-\newcommand{\tabref}[1]{Tab.~\ref{fig:#1}}
+\newcommand{\tabref}[1]{Tab.~\ref{tab:#1}}
+
 
 \lstset{
   %frame=tb,
@@ -126,21 +128,32 @@
 %----------------------------------------------------------------------------------------
 %	ARTICLE CONTENTS
 %----------------------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+The goal of this project is to solve the inverse kinematic problem of the Kuka KR210 \cite{kuka}
+robotic arm. A schematic drawing of this arm is shown in \figref{schematic}. It consists of six joints:
+the first three joints allow the arm to position its \emph{wrist center} inside of its operating
+space, while the last three joints allow for positioning the tool (in this case a gripper)
+in any orientation in 3D space.
 
-\section{DH Parameters and Forward Kinematics}
+Accordingly, the inverse kinematic problem can be decoupled into two parts. After calculating
+the position of the wrist center from the required tool position and orientation, the angles
+$\theta_1$, $\theta_2$ and $\theta_3$ are computed by an algebraic approach. After the
+first three joint angles have been established, the angles $\theta_4$, $\theta_5$ and $\theta_6$
+can be determined in order to achieve the required position and orientation of the tool.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[ht]
   \centering \input{kuka_arm.pdf_tex}
   \caption{Schematic of the Kuka KR210 arm.}
   \label{fig:schematic}
 \end{figure}
-
-
-\begin{table}[ht]
-\caption{Modified DH parameters of the Kuka KR210 arm.}
-\label{tab:dh-parameters}
-\include{tables/dh-parameters}
-\end{table}
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{DH Parameters and Forward Kinematics}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+According to \cite{craig_2005} the forward kinematic problem of a robot arm can be decomposed
+into consecutive \emph{link frames}, each consisting of one \emph{joint} and one \emph{link}.
+For each of these segments, a homogenous transformation matrix can be defined,
+by adhering to a convention called the \emph{modified Denavit-Hartenberg notation}:
 \begin{equation}
 \T{i-1}{i} =
 \begin{bmatrix}
@@ -149,7 +162,32 @@
   \s\theta_i\s\alpha_{i-1} & \c\theta_i\s\alpha_{i-i} &  \c\alpha_{i-1} &  \c\alpha_{i-1}d_i \\
   0 & 0 & 0 & 1\\
 \end{bmatrix}
+\label{eq:dh_transform}
 \end{equation}
+
+Here, $\theta_i$ is the joint angle, which measures the rotation around the axis $z_i$.
+The parameters $d_i$ and $a_{i-1}$ measure the displacement from one link to the next in
+the direction of the axes $z_i$ and $x_i$, respectively. Finally, the parameter $\alpha_{i-i}$
+measures the angle between the axes $z_{i-1}$ and $z_i$.
+
+In this project, the geometry of the Kuka KR210 was provided in form of a URDF file that
+describes the dimensions and properties of the links and joints of the arm. From this description,
+the modified DH parameters can be inferred in a relatively straightforward manner and are summarized
+in \tabref{dh-parameters}.
+\begin{table}[ht]
+\caption{Modified DH parameters of the Kuka KR210 arm.}
+\label{tab:dh-parameters}
+\include{tables/dh-parameters}
+\end{table}
+
+Care has to be taken that the reference frames in the URDF differ from those in the DH convention.
+For example, the parameter $d_1$ results from summing the vertical displacement of the first
+two links in the URDF file. Another peculiarity is the joint angle $\theta_2$ that includes
+an offset of $-90\degree$ because the arm has a right angle at its resting position for
+joint two.
+
+With the help of \eqref{eq:dh_transform}, the following transformation matrices for the
+Kuka arm joints can be established that fully describe its forward kinematics:
 
 \noindent
 \begin{minipage}{0.33\linewidth}
@@ -243,10 +281,37 @@
 \begin{minipage}{0.33\linewidth}
 \end{minipage}
 
+\vspace{1ex}
+
+In addition, the following correction matrix is needed to convert from the DH frame of the
+gripper to the URDF frame:
+\begin{equation}
+  T_{corr} =
+  \begin{bmatrix}
+    \c\pi &  -\s\pi &  0 &  0 \\
+    \s\pi &  \c\pi  &  0 &  0 \\
+        0 &         0 &  1 &  0 \\
+        0 &         0 &  0 &  1 \\
+  \end{bmatrix}
+  \cdot
+  \begin{bmatrix}
+      \c\frac{\pi}{2} &  0 &  \s\frac{\pi}{2} &  0 \\
+               0 &  1 &           0 &  0 \\
+     -\s\frac{\pi}{2} &  0 &  \c\frac{\pi}{2} &  0 \\
+               0 &  0 &           0 &  1 \\
+  \end{bmatrix}
+\end{equation}
+
+By multiplying these matrices, the total homogeneous transformation from the base link to
+the gripper link can be expressed as:
+\begin{equation}
+  \T{0}{G} = \T{0}{1}\cdot\T{1}{2}\cdot\T{2}{3}\cdot\T{3}{4}\cdot\T{4}{5}\cdot\T{5}{6}\cdot\T{6}{G}\cdot T_{corr}
+\end{equation}
+
 \section{Calculation of the Wrist Center Position}
-The orientation of the gripper is supplied to the inverse kinematic server as a quaternion.
+The orientation of the gripper is supplied to the inverse kinematic server as a quaternion \cite{quaternion}.
 From this, the rotation matrix relative to the base frame can be computed using the function
-\code{tf.transformations.quaternion\_matrix}, which is equivalent to the following:
+\code{tf.transformations.quaternion\_matrix}\cite{tftransf81:online}, which is equivalent to the following:
 \begin{equation}
   R_{gripper} =
   \begin{bmatrix}
@@ -258,7 +323,7 @@ From this, the rotation matrix relative to the base frame can be computed using 
 \end{equation}
 
 Alternatively, the roll ($\phi$), pitch ($\theta$), and yaw ($\psi$) angles can be computed with the function
-\\ \code{transformations.euler\_from\_quaternion}, by specifiying the \code{'rzyx'} option.
+\\ \code{transformations.euler\_from\_quaternion}\cite{tftransf81:online}, by specifiying the \code{'rzyx'} option.
 This computes the Euler angles relative to the local frame in the order of a rotation about the
 z, y and x axes in this order. With these Euler angles, the total rotation matrix can be computed as:
 
@@ -286,8 +351,8 @@ frame can be expressed as:
 \end{equation}
 
 The third column of this transformation matrix represents the z-axis of the griper frame $N_{z,gripper}$.
-XXXXXXX
-
+With the help of this vector, it now becomes possible to calculate the position of the wrist center
+from that of the gripper tip:
 \begin{equation}
   \begin{bmatrix}
     w_x \\ w_y \\ w_z
@@ -330,6 +395,9 @@ For this, the wrist center is transformed into the reference frame of link 1:
 \end{matrix}
 \end{equation}
 
+\newpage
+The basis for determining the angles $\theta_2$ and $\theta_3$ is the transformation from
+joint one to the wrist center, which can be expressed by the matrix $\T{1}{4}$:
 \begin{equation}
 \T{4}{1} =
 \begin{bmatrix}
@@ -357,7 +425,6 @@ wrist center relative to the origin of link 1, so we can extract the following t
 The angle $\theta_3$ effectively defines the reach or radius of the robot arm, which has to be equal
 to the distance between link one and the transformed wrist center position in the plane of the arm.
 Thus by computing the squared distance we get:
-
 \begin{equation}
 \begin{split}
 (w_{tx} - a_1)^2 + w_{tz}^2
@@ -381,12 +448,13 @@ Thus by computing the squared distance we get:
 % \begin{equation}
 %   \alpha\sin(x) + \beta\cos(x) = \gamma \sin(x + \phi), \ \text{with:}\ \gamma = \sqrt{\alpha^2 + \beta^2},\ \phi = \text{atan2}(\beta, \alpha)
 % \end{equation}
-
-Solving \eqref{eq:theta3} for $\theta_3$ finally yields:
+\vspace{2ex}
+\noindent Solving \eqref{eq:theta3} for $\theta_3$ finally yields \cite{trigonometric}:
 \begin{equation}
   \theta_3 = \text{asin}\left(\frac{\rho^2 - \sigma^2}{2 a_2 \sqrt{a_3^2 + d_4^2}}\right) - \text{atan2}(a_3, -d_4)
 \end{equation}
 
+\vspace{2ex}
 With $\theta_3$ determined, it now becomes possible to solve for $\theta_2$.
 This sub-problem can be further divided into the two angles $\theta_{21}$ and $\theta_{22}$ (cf. Fig. 2).
 The angle $\theta_{21}$ can be thought of as the angle required to place the tip of a straight arm
@@ -397,31 +465,33 @@ with length $\rho$ at the wrist center. It be can easily computed as:
 
 The angle $\theta_{22}$ can now be solved by utilizing the matrix element $\T{1}{4}_{33}$ in
 \eqref{eq:trans14}. Here, the vertical displacement $w_{tz}$
-has already been accounted for by $\theta_{21}$ so that this matrix element must be equal to zero for $\theta_{22}$:
+has already been accounted for by $\theta_{21}$. Thus, this matrix element must be equal to zero for $\theta_{22}$:
 \begin{equation}
   a_2\c\theta_{22} + a_3\c(\theta_{22} + \theta_3) - d_4\s(\theta_{22} + \theta_3)
     = \alpha_{22} \sin(\theta_{22} + \phi_{22}) = 0
 \end{equation}
 
-Solving this equation for $\theta_{22}$ yields:
+\vspace{2ex}
+\noindent Solving this equation for $\theta_{22}$, using the linear combination of the sinusoids \cite{trigonometric}, yields (with $n=0$):
 \begin{equation}
   \theta_{22} = -\text{atan2}(-a_3\s\theta_3 - d_4\c\theta_3, a_2 + a_3\c\theta_3 - d_4\s\theta_3) + n\pi
 \end{equation}
 
-Finally, the two angles $\theta_{21}$ and $\theta_{22}$ can be combined:
+\vspace{2ex}
+\noindent Finally, the two angles $\theta_{21}$ and $\theta_{22}$ can be combined, taking into account the
+offset angle at that joint:
 \begin{equation}
   \theta_2 = \frac{\pi}{2} - \theta_{21} - \theta_{22}
 \end{equation}
 
 \section{Inverse Kinematics of the Gripper Orientation}
 Once the first three joint angles have been determined, the inverse kinematics problem can be
-completed by computing the orientation of the tool relative to the wrist center. The desired
-orientation of the gripper is supplied to the IK solver in form of a quaternion \ref{quaternion}.
-As the angles $\theta_1$, $\theta_2$ and $\theta_3$ are already known from the previous steps,
-it is now possible to compute the rotation matrix $\R{3}{6}$ by premultiplying the matrix $R_{gripper}$
-with the inverse of the composite rotation $\R{0}{3}$:
+completed by computing the orientation of the tool relative to the wrist center. To achieve
+this, the rotation matrix $\R{3}{6}$ is calculated by premultiplying the matrix $R_{gripper}$
+with the inverse of the composite rotation $\R{0}{3}$. This matrix is then compared to the
+product of the rotations $\R{3}{4}$, $\R{4}{5}$ and $\R{5}{6}$:
 \begin{equation}
-  \R{3}{6} = (\R{0}{1}\cdot \R{1}{2}\cdot \R{2}{3})^{-1} R_{gripper} =
+  \R{3}{6} = (\R{0}{1}\cdot \R{1}{2}\cdot \R{2}{3})^{-1} R_{gripper} = \R{3}{4} \cdot \R{4}{5} \cdot \R{5}{6} =
   \begin{bmatrix}
     -\s\theta_4 \s\theta_6 + \c\theta_4\c\theta_5 \c\theta_6 & -\s\theta_4 \c\theta_6 - \s\theta_6 \c\theta_4 \c\theta_5 & -\s\theta_5 \c\theta_4 \\
                                         \s\theta_5 \c\theta_6 &                                    -\s\theta_5 \s\theta_6 &             \c\theta_5 \\
@@ -477,11 +547,12 @@ to the ground truth position $p_{gt,i}$ (the original gripper coordinates provid
 \end{equation}
 
 The resulting RMSE values for three typical pick and place cycles are summarized in
-\tabref{rmse}. As can be seen, the RMSE values are in the magnitude of floating point
-rounding errors, thus supporting the correctness of the presented inverse kinematics procedure.
+\tabref{rmse}. As can be seen, the RMSE values are roughly of the same magnitude as floating point
+rounding errors, thus supporting the correctness and high accuracy of the presented inverse kinematics procedure.
 
 \begin{table}[ht]
   \caption{RMSE values of the predicted gripper position for three typical pick and place cycles.}
+  \label{tab:rmse}
   \centering\begin{tabular}{c|ccc}
     n & $\text{RMSE}(p_x)/m$ & $\text{RMSE}(p_y)/m$ & $\text{RMSE}(p_z)/m$ \\
     \hline
@@ -495,9 +566,8 @@ rounding errors, thus supporting the correctness of the presented inverse kinema
 %----------------------------------------------------------------------------------------
 %	REFERENCE LIST
 %----------------------------------------------------------------------------------------
-
-%\bibliography{research_review}
-%\bibliographystyle{ieeetr}
+\bibliography{main}
+\bibliographystyle{ieeetr}
 %----------------------------------------------------------------------------------------
 
 \end{document}
