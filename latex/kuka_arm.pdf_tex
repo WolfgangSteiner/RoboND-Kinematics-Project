@@ -1,0 +1,77 @@
+%% Creator: Inkscape inkscape 0.91, www.inkscape.org
+%% PDF/EPS/PS + LaTeX output extension by Johan Engelen, 2010
+%% Accompanies image file 'kuka_arm.pdf' (pdf, eps, ps)
+%%
+%% To include the image in your LaTeX document, write
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics{<filename>.pdf}
+%% To scale the image, write
+%%   \def\svgwidth{<desired width>}
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics[width=<desired width>]{<filename>.pdf}
+%%
+%% Images with a different path to the parent latex file can
+%% be accessed with the `import' package (which may need to be
+%% installed) using
+%%   \usepackage{import}
+%% in the preamble, and then including the image with
+%%   \import{<path to file>}{<filename>.pdf_tex}
+%% Alternatively, one can specify
+%%   \graphicspath{{<path to file>/}}
+%% 
+%% For more information, please see info/svg-inkscape on CTAN:
+%%   http://tug.ctan.org/tex-archive/info/svg-inkscape
+%%
+\begingroup%
+  \makeatletter%
+  \providecommand\color[2][]{%
+    \errmessage{(Inkscape) Color is used for the text in Inkscape, but the package 'color.sty' is not loaded}%
+    \renewcommand\color[2][]{}%
+  }%
+  \providecommand\transparent[1]{%
+    \errmessage{(Inkscape) Transparency is used (non-zero) for the text in Inkscape, but the package 'transparent.sty' is not loaded}%
+    \renewcommand\transparent[1]{}%
+  }%
+  \providecommand\rotatebox[2]{#2}%
+  \ifx\svgwidth\undefined%
+    \setlength{\unitlength}{419.20532277bp}%
+    \ifx\svgscale\undefined%
+      \relax%
+    \else%
+      \setlength{\unitlength}{\unitlength * \real{\svgscale}}%
+    \fi%
+  \else%
+    \setlength{\unitlength}{\svgwidth}%
+  \fi%
+  \global\let\svgwidth\undefined%
+  \global\let\svgscale\undefined%
+  \makeatother%
+  \begin{picture}(1,0.54591763)%
+    \put(0,0){\includegraphics[width=\unitlength,page=1]{kuka_arm.pdf}}%
+    \put(0.1076485,0.53504326){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z_1$}}}%
+    \put(0.30527418,0.14898385){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z_2$}}}%
+    \put(0.2837086,0.50817468){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z_3$}}}%
+    \put(0.59269754,0.50888176){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z_5$}}}%
+    \put(0.90805007,0.4247406){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z_4$, $z_6$}}}%
+    \put(0.11365857,0.04822657){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{1}}}%
+    \put(0.22042596,0.14049897){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{2}}}%
+    \put(0.17800182,0.44453851){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{3}}}%
+    \put(0.36749622,0.45655864){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{4}}}%
+    \put(0.48946551,0.42403352){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{5}}}%
+    \put(0.61532371,0.43251834){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{6}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=2]{kuka_arm.pdf}}%
+    \put(0.236335,0.00509542){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$\theta_1$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=3]{kuka_arm.pdf}}%
+    \put(0.2239613,0.09206481){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$\theta_2$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=4]{kuka_arm.pdf}}%
+    \put(0.2239613,0.41236686){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$\theta_3$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=5]{kuka_arm.pdf}}%
+    \put(0.52517249,0.41413453){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$\theta_5$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=6]{kuka_arm.pdf}}%
+    \put(0.35264777,0.39893254){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$\theta_4$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=7]{kuka_arm.pdf}}%
+    \put(0.62027326,0.39504367){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$\theta_6$}}}%
+  \end{picture}%
+\endgroup%
