@@ -330,21 +330,21 @@ For this, the wrist center is transformed into the reference frame of link 1:
 \end{matrix}
 \end{equation}
 
-\begin{equation*}
+\begin{equation}
 \T{4}{1} =
 \begin{bmatrix}
   \s(\theta_2 + \theta_3)\c\theta_4 & -\s\theta_4\s(\theta_2 + \theta_3) & \c(\theta_2 + \theta_3) & a_1 + a_2\s(\theta_2) + a_3\s(\theta_2 + \theta_3) + d_4\c(\theta_2 + \theta_3) \\
   -\s\theta_4 & -\c\theta_4 & 0 & 0 \\
   \c\theta_4\c(\theta_2 + \theta_3) & -\s\theta_4\c(\theta_2 + \theta_3) & -\s(\theta_2 + \theta_3) & a_2\c(\theta_2) + a_3\c(\theta_2 + \theta_3) - d_4\s(\theta_2 + \theta_3) \\
   0 & 0 & 0 & 1\\
+  \label{eq:trans14}
 \end{bmatrix}
 % =
 % \begin{bmatrix}
 % & R_1^4& & \begin{matrix} w_{tx} \\ w_{ty} \\ w_{tz} \end{matrix} \\
 % 0 & 0 & 0 & 1 \\
 % \end{bmatrix}
-\label{eq:t41}
-\end{equation*}
+\end{equation}
 
 The entries of the rightmost column of the matrix $\T{4}{1}$ represent the translation of the
 wrist center relative to the origin of link 1, so we can extract the following two equations from this:
@@ -367,15 +367,13 @@ Thus by computing the squared distance we get:
   = a_2^2 + a_3^2 + d_4^2 + 2 a_2 a_3 \c\theta_3 - 2 a_2 d_4\s\theta_3 \\
 \end{split}
 \end{equation}
-
 \begin{equation}
   \frac{\rho^2 - \sigma^2}{2 a_2} = a_3\c\theta_3 - d_4\s\theta_3 = \sqrt{a_3^2 + d_4^2} \cdot \sin(\theta_3 + \text{atan2}(a_3, -d_4))
+  \label{eq:theta3}
 \end{equation}
-
 \begin{equation}
   \rho^2 = (w_{tx} - a_1)^2 + w_{tz}^2
 \end{equation}
-
 \begin{equation}
   \sigma^2 = a_2^2 + a_3^2 + d_4^2
 \end{equation}
@@ -384,24 +382,48 @@ Thus by computing the squared distance we get:
 %   \alpha\sin(x) + \beta\cos(x) = \gamma \sin(x + \phi), \ \text{with:}\ \gamma = \sqrt{\alpha^2 + \beta^2},\ \phi = \text{atan2}(\beta, \alpha)
 % \end{equation}
 
+Solving \eqref{eq:theta3} for $\theta_3$ finally yields:
 \begin{equation}
   \theta_3 = \text{asin}\left(\frac{\rho^2 - \sigma^2}{2 a_2 \sqrt{a_3^2 + d_4^2}}\right) - \text{atan2}(a_3, -d_4)
+\end{equation}
+
+With $\theta_3$ determined, it now becomes possible to solve for $\theta_2$.
+This sub-problem can be further divided into the two angles $\theta_{21}$ and $\theta_{22}$ (cf. Fig. 2).
+The angle $\theta_{21}$ can be thought of as the angle required to place the tip of a straight arm
+with length $\rho$ at the wrist center. It be can easily computed as:
+\begin{equation}
+  \theta_{21} = \text{atan2}(w_{tz}, w_{tx} - a_1)
+\end{equation}
+
+The angle $\theta_{22}$ can now be solved by utilizing the matrix element $\T{1}{4}_{33}$ in
+\eqref{eq:trans14}. Here, the vertical displacement $w_{tz}$
+has already been accounted for by $\theta_{21}$ so that this matrix element must be equal to zero for $\theta_{22}$:
+\begin{equation}
+  a_2\c\theta_{22} + a_3\c(\theta_{22} + \theta_3) - d_4\s(\theta_{22} + \theta_3)
+    = \alpha_{22} \sin(\theta_{22} + \phi_{22}) = 0
+\end{equation}
+
+Solving this equation for $\theta_{22}$ yields:
+\begin{equation}
+  \theta_{22} = -\text{atan2}(-a_3\s\theta_3 - d_4\c\theta_3, a_2 + a_3\c\theta_3 - d_4\s\theta_3) + n\pi
+\end{equation}
+
+Finally, the two angles $\theta_{21}$ and $\theta_{22}$ can be combined:
+\begin{equation}
+  \theta_2 = \frac{\pi}{2} - \theta_{21} - \theta_{22}
 \end{equation}
 
 \section{Inverse Kinematics of the Gripper Orientation}
 Once the first three joint angles have been determined, the inverse kinematics problem can be
 completed by computing the orientation of the tool relative to the wrist center. The desired
 orientation of the gripper is supplied to the IK solver in form of a quaternion \ref{quaternion}.
-
-
-
 As the angles $\theta_1$, $\theta_2$ and $\theta_3$ are already known from the previous steps,
 it is now possible to compute the rotation matrix $\R{3}{6}$ by premultiplying the matrix $R_{gripper}$
 with the inverse of the composite rotation $\R{0}{3}$:
 \begin{equation}
   \R{3}{6} = (\R{0}{1}\cdot \R{1}{2}\cdot \R{2}{3})^{-1} R_{gripper} =
   \begin{bmatrix}
-    -\s\theta_4 \s\theta_6 + \c\theta_4*\c\theta_5 \c\theta_6 & -\s\theta_4 \c\theta_6 - \s\theta_6 \c\theta_4 \c\theta_5 & -\s\theta_5 \c\theta_4 \\
+    -\s\theta_4 \s\theta_6 + \c\theta_4\c\theta_5 \c\theta_6 & -\s\theta_4 \c\theta_6 - \s\theta_6 \c\theta_4 \c\theta_5 & -\s\theta_5 \c\theta_4 \\
                                         \s\theta_5 \c\theta_6 &                                    -\s\theta_5 \s\theta_6 &             \c\theta_5 \\
     -\s\theta_4 \c\theta_5 \c\theta_6 - \s\theta_6 \c\theta_4 &  \s\theta_4 \s\theta_6 \c\theta_5 - \c\theta_4 \c\theta_6 &  \s\theta_4 \s\theta_5
   \end{bmatrix}
@@ -419,7 +441,7 @@ $\R{3}{6}$.
   \frac{\R{3}{6}_{33}}{-\R{3}{6}_{13}} = \frac{\s\theta_4\s\theta_5}{\c\theta_4\s\theta_5} = \tan(\theta_4)
 \end{equation}
 
-From this, $\theta_4$ can be computed as follows. Here, I set $theta_4$ to zero for very small
+From this, $\theta_4$ can be computed as follows. Here, I set $\theta_4$ to zero for very small
 $\theta_5$. In this case, the correct orientation of the gripper is achieved by $\theta_6$.
 \begin{equation}
   \theta_4
@@ -437,14 +459,38 @@ Thus, we get the following expressions for computing $\theta_6$:
   \theta_6 =
   \begin{cases}
      \text{acos}\left(\frac{\R{3}{6}_{21}}{\sin(\theta_5)}\right) & \text{if}\ |\theta_5| > \epsilon \\
-     \text{acos}\left(\R{3}{6}_{11}\right)                & \text{if}\ |\theta_5| < \epsilon
+     \text{acos}\left(\R{3}{6}_{11}\right)                & \text{if}\ |\theta_5| \leq \epsilon
   \end{cases}
 \end{equation}
-% \begin{lstlisting}
-%   yaw, pitch, roll = tf.transformations.euler_from_quaternion(quaternion, 'rzyx')
-% \end{lstlisting}
 
-%------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+With the presented inverse kinematics procedure, the robot arm is able to reliably pick up
+the object and place it in the receptacle. In order to measure the accuracy of the procedure,
+I calculate the root-mean-square error (RMSE) of the gripper position in the following way:
+at each time step I perform a forward kinematics pass with the calculated joint angles
+in order to compute the predicted gripper position $p_{pred,i}$, which is then compared
+to the ground truth position $p_{gt,i}$ (the original gripper coordinates provided by the path planner):
+\begin{equation}
+  \text{RMSE(p)} = \sqrt{\frac{1}{n}\sum\limits_i(p_{pred,i} - p_{gt,i})^2}
+\end{equation}
+
+The resulting RMSE values for three typical pick and place cycles are summarized in
+\tabref{rmse}. As can be seen, the RMSE values are in the magnitude of floating point
+rounding errors, thus supporting the correctness of the presented inverse kinematics procedure.
+
+\begin{table}[ht]
+  \caption{RMSE values of the predicted gripper position for three typical pick and place cycles.}
+  \centering\begin{tabular}{c|ccc}
+    n & $\text{RMSE}(p_x)/m$ & $\text{RMSE}(p_y)/m$ & $\text{RMSE}(p_z)/m$ \\
+    \hline
+    1 & $1.38372517 \cdot 10^{−16}$ & $2.50313645 \cdot 10^{−16}$ & $1.01349032 \cdot 10^{−16}$\\
+    2 & $8.69068332 \cdot 10^{−15}$ & $1.21391017 \cdot 10^{−10}$ & $4.44089210 \cdot 10^{−16}$\\
+    3 & $1.64697269 \cdot 10^{−15}$ & $2.23592115 \cdot 10^{−11}$ & $3.59867566 \cdot 10^{−16}$
+  \end{tabular}
+\end{table}
+
 
 %----------------------------------------------------------------------------------------
 %	REFERENCE LIST
