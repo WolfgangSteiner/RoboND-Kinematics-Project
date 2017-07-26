@@ -21,6 +21,7 @@ import numpy as np
 import math
 
 
+# Class for calculating the RMSE of the predicted gripper position
 class RMSE:
     def __init__(self):
         self.acc = None
@@ -47,6 +48,7 @@ def make_sympy_vector(px,py,pz):
     return Matrix([[px],[py],[pz],[1]])
 
 
+# Some helper functions
 def safe_asin(expr):
     return asin(Max(-1.0, Min(1.0, expr)))
 
@@ -57,29 +59,33 @@ def normalize_vector(v):
     s = sqrt(v[0]**2 + v[1]**2 + v[2]**2)
     return v / s
 
-    #rospy.loginfo("Received %s eef-poses from the plan" % len(req.poses))
 
+# Define the symbols for the DH parameters:
 q0,q1,q2,q3,q4,q5,q6 = symbols('q0:7')
 d0,d1,d2,d3,d4,d5,d6,d7 = symbols('d0:8')
 a0,a1,a2,a3,a4,a5 = symbols('a0:6')
 
+
+# Define the static DH parameters:
 parameters = {a0:0,a1:0.35,a2:1.25,a3:-0.054,a4:0,a5:0,
      d0:0,d1:0.75,d2:0,d3:0,d4:1.5,d5:0,d6:0,d7:0.303,
      q0:0,q1:0,q2:0,q3:0,q4:0,q5:0,q6:0
     }
 
+
 # Symbols for the gripper position:
 g_x, g_y, g_z = symbols('g_x g_y g_z')
+
 
 # Symbols for the wrist position:
 w_x, w_y, w_z = symbols('w_x w_y w_z')
 
-# Symbols for the quarternion:
-#q_x, q_y, q_z, q_w = symbols('q_x q_y q_z q_w')
 
 # Symbols for rotation matrices:
 phi_x, phi_y, phi_z = symbols('phi_x phi_y phi_z')
 
+
+# Atomic rotation matrices:
 R_x = Matrix(
     [[ 1,          0,          0,  0 ],
      [ 0,  cos(phi_x), -sin(phi_x),  0 ],
@@ -99,6 +105,8 @@ R_z = Matrix(
      [        0,         0, 0, 1 ]])
 
 
+
+# Components of the correction matrix from DH to URDF frame:
 R_corr_z = Matrix(
     [[cos(pi), -sin(pi), 0, 0 ],
      [sin(pi),  cos(pi), 0, 0 ],
@@ -111,14 +119,11 @@ R_corr_y = Matrix(
      [-sin(-pi/2), 0, cos(-pi/2), 0 ],
      [          0, 0,          0, 1 ]])
 
-#R_corr = (R_z * R_y).evalf(subs={phi_y:-np.pi/2, phi_z:np.pi})
-
-T_trans = Matrix([[1,0,0,1.1], [0,1,0,2.2], [0,0,1,3.3], [0,0,0,1]])
-
 R_corr = R_corr_z * R_corr_y
 R_zyx = simplify(R_z * R_y * R_x)
 
-# Individiual transformation matrices
+
+# Individiual link frame transformation matrices:
 T1_0 = Matrix(
   [[ cos(q1), -sin(q1),   0,   0],
    [ sin(q1),  cos(q1),   0,   0],
@@ -163,63 +168,41 @@ TG_6 = Matrix(
 
 T3_0 = simplify(T1_0 * T2_1 * T3_2)
 T4_1 = simplify(T2_1 * T3_2 * T4_3)
+T4_0 = simplify(T1_0 * T4_1)
 T6_0 = T1_0 * T2_1 * T3_2 * T4_3 * T5_4 * T6_5
 T6_3 = simplify(T4_3 * T5_4 * T6_5)
 T_total = T6_0 * TG_6 * R_corr
-print "T6_3:", T6_3
 
-
-# T6_4_euler = Matrix(
-#     [[cos(alpha)*cos(beta), cos(alpha)*sin(beta)*sin(gamma) - sin(alpha)*cos(gamma), cos(alpha)*sin(beta)*cos(gamma)+sin(alpha)*sin(gamma), 0],
-#      [sin(alpha)*cos(beta), sin(alpha)*sin(beta)*sin(gamma) + cos(alpha)*cos(gamma), sin(alpha)*sin(beta)*cos(gamma)-cos(alpha)*sin(gamma), 0],
-#      [          -sin(beta),                                    cos(beta)*sin(gamma),                                  cos(beta)*cos(gamma), 0],
-#      [                   0,                                                       0,                                                     0, 1]])
-#
-# TG_4_euler = simplify(T6_4_euler * TG_6);
-# T4_G_euler = TG_4_euler.inv();
-
-#q_s = sqrt(1 - q_w**2)
-#N_gripper = Matrix([q_x/q_s, q_y/q_s, q_z/q_s, 0])
-
+# Axis along the gripper tool:
 N_gripper = R_zyx.col(2)
 gripper_pos = Matrix([g_x, g_y, g_z, 1])
 wrist_pos = gripper_pos - N_gripper * d7
 
-
-#TG_3 = simplify(T4_3 * T5_4 * T6_5 * TG_6)
-#theta5_sym = solve(TG_3[1,2] - T6_4_euler[1,2], q5)
-#print(TG_3)
-#print "theta5_sym: ", theta5_sym
-
-
+# Transformed wrist center position:
 w_tx = cos(q1)*w_x + sin(q1)*w_y
 w_ty = 0
 w_tz = w_z - d1
 
-#p_gripper = Matrix([[p_g[0]], [p_g[1]], [p_g[2]], [1]])
 
-T4_0 = simplify(T1_0 * T4_1)
+# Zero vector for forward kinematics:
 p_0 = Matrix([[0],[0],[0],[1]])
 
-#rho1_sq = simplify((T4_1[0,3]-a1)**2+T4_1[2,3]**2)
-#print "rho1_sq:", rho1_sq
 
-#rho_sq = simplify(pow(T4_1[0,3]-a1,2) + pow(T4_1[2,3],2))
+# Expressions for calculating q3:
 rho_sq = pow(w_tx - a1,2) + pow(w_tz,2)
 sigma_sq = a2**2 + a3**2 + d4**2
 theta3_sym = pi - safe_asin((rho_sq - sigma_sq)/(2*a2*sqrt(a3**2+d4**2))) - atan2(a3, -d4)
 
+
+# Expressions for calculating q2:
 theta2_1_sym = atan2(w_tz,w_tx - a1)
-#theta2_2_sym = -atan2(a2 + a3*cos(q3)-d4*sin(q3), -a3*sin(q3)-d4*cos(q3))
 theta2_2_sym = -atan2(-a3*sin(q3)-d4*cos(q3), a2 + a3*cos(q3)-d4*sin(q3))
 theta2_sym = pi/2 - theta2_1_sym - theta2_2_sym
 
-#theta5_sym = acos(cos(alpha_res)*cos(beta_res))
-#theta6_sym = asin((-sin(alpha_res)*cos(gamma) + cos(alpha_res)*sin(beta_res)*sin(gamma)) / sin(q5))
-#theta4_sym = asin(sin(alpha_res)*cos(beta_res) / sin(q5))
+
+# Objects for accumulating RMSE values:
 rmse_wrist = RMSE()
 rmse_gripper = RMSE()
-
 
 
 def inverse_kinematics_wrist(wrist_pos):
@@ -232,7 +215,6 @@ def inverse_kinematics_wrist(wrist_pos):
     parameters[w_z] = wz
     parameters[q1] = theta1
     parameters[q4] = 0.0
-    #print("sigma/sqrt(a3**2+d4**2):", (sigma/sqrt(a3**2+d4**2)).evalf(subs=parameters))
 
     theta3 = normalize(theta3_sym.evalf(subs=parameters))
     print("theta3:", theta3)
@@ -247,14 +229,6 @@ def inverse_kinematics_wrist(wrist_pos):
 
 
 def inverse_kinematics_gripper(R_gripper):
-    # T6_3: Matrix([
-    # [-sin(q4)*sin(q6) + cos(q4)*cos(q5)*cos(q6), -sin(q4)*cos(q6) - sin(q6)*cos(q4)*cos(q5), -sin(q5)*cos(q4), a3],
-    # [                           sin(q5)*cos(q6),                           -sin(q5)*sin(q6),          cos(q5), d4],
-    # [-sin(q4)*cos(q5)*cos(q6) - sin(q6)*cos(q4),  sin(q4)*sin(q6)*cos(q5) - cos(q4)*cos(q6),  sin(q4)*sin(q5),  0],
-    # [                                         0,                                          0,                0,  1]])
-
-    #R_gripper[2,2] / R_gripper[0,2] = sin(q4)*sin(q5) / (-cos(q4)*sin(q5)) = -sin(q4)/cos(q4) = -tan(q4)
-
     R_gripper = T3_0.inv().evalf(subs=parameters) * R_gripper
 
     theta5 = math.acos(R_gripper[1,2])
@@ -273,7 +247,6 @@ def inverse_kinematics_gripper(R_gripper):
         parameters[q4] = theta4
 
     return theta4,theta5,theta6
-
 
 
 def forward_kinematics(angles):
@@ -296,7 +269,6 @@ def calc_gripper_rotation_matrix(quaternion):
         return Matrix(tf.transformations.quaternion_matrix(quaternion)) * R_corr
     else:
         yaw_val, pitch_val, roll_val = tf.transformations.euler_from_quaternion(quaternion, 'rzyx')
-#        print R_zyx * R_corr
         return (R_zyx * R_corr).evalf(subs={phi_x:roll_val, phi_y:pitch_val, phi_z:yaw_val})
 
 
@@ -309,7 +281,6 @@ def handle_calculate_IK(req):
         print "No valid poses received"
         return -1
     else:
-        # Initialize service response
         joint_trajectory_list = []
 
         for x in xrange(0, len(req.poses)):
@@ -344,9 +315,6 @@ def handle_calculate_IK(req):
         return CalculateIKResponse(joint_trajectory_list)
 
 
-handle_calculate_IK.globals = None
-
-
 def IK_server():
     # initialize node and declare calculate_ik service
     rospy.init_node('IK_server')
@@ -355,7 +323,8 @@ def IK_server():
     rospy.spin()
 
 if __name__ == "__main__":
-    if False:
+    TESTING = False
+    if TESTING:
         test_cases = [
             (
                 [2.16135,-1.42635,1.55109],
@@ -406,8 +375,7 @@ if __name__ == "__main__":
             print "Angles pred:", angles_pred
             print
             print
-        1/0
-        import math
+
         rmse = RMSE()
         phi = 0
         r = 3.0
