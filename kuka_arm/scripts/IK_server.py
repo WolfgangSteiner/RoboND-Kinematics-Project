@@ -112,9 +112,11 @@ R_corr_y = Matrix(
      [          0, 0,          0, 1 ]])
 
 #R_corr = (R_z * R_y).evalf(subs={phi_y:-np.pi/2, phi_z:np.pi})
+
+T_trans = Matrix([[1,0,0,1.1], [0,1,0,2.2], [0,0,1,3.3], [0,0,0,1]])
+
 R_corr = R_corr_z * R_corr_y
 R_zyx = simplify(R_z * R_y * R_x)
-
 
 # Individiual transformation matrices
 T1_0 = Matrix(
@@ -215,6 +217,9 @@ theta2_sym = pi/2 - theta2_1_sym - theta2_2_sym
 #theta5_sym = acos(cos(alpha_res)*cos(beta_res))
 #theta6_sym = asin((-sin(alpha_res)*cos(gamma) + cos(alpha_res)*sin(beta_res)*sin(gamma)) / sin(q5))
 #theta4_sym = asin(sin(alpha_res)*cos(beta_res) / sin(q5))
+rmse_wrist = RMSE()
+rmse_gripper = RMSE()
+
 
 
 def inverse_kinematics_wrist(wrist_pos):
@@ -287,10 +292,11 @@ def forward_kinematics(angles):
 
 
 def calc_gripper_rotation_matrix(quaternion):
-    if True:
+    if False:
         return Matrix(tf.transformations.quaternion_matrix(quaternion)) * R_corr
     else:
         yaw_val, pitch_val, roll_val = tf.transformations.euler_from_quaternion(quaternion, 'rzyx')
+#        print R_zyx * R_corr
         return (R_zyx * R_corr).evalf(subs={phi_x:roll_val, phi_y:pitch_val, phi_z:yaw_val})
 
 
@@ -316,10 +322,19 @@ def handle_calculate_IK(req):
             theta1,theta2,theta3 = inverse_kinematics_wrist(wrist_pos)
             theta4,theta5,theta6 = inverse_kinematics_gripper(R_gripper)
 
+            wrist_pos_pred = forward_kinematics([theta1, theta2, theta3])
+            gripper_pos_pred = forward_kinematics([theta1, theta2, theta3, theta4, theta5, theta6])
+
             print "Tool position :", gripper_pos
             print "Wrist position:", wrist_pos
-            print "Resulting wrist position: ", forward_kinematics([theta1, theta2, theta3])
-            print "Resulting Tool position:", forward_kinematics([theta1, theta2, theta3, theta4, theta5, theta6])
+            print "Resulting wrist position: ", wrist_pos_pred
+            print "Resulting Tool position:", gripper_pos_pred
+
+            rmse_wrist.add(wrist_pos_pred, wrist_pos)
+            rmse_gripper.add(gripper_pos_pred, gripper_pos)
+
+            print "RMSE wrist:", rmse_wrist.get()
+            print "RMSE gripper:", rmse_gripper.get()
 
             joint_trajectory_point = JointTrajectoryPoint()
             joint_trajectory_point.positions = [theta1,theta2,theta3,theta4,theta5,theta6]
